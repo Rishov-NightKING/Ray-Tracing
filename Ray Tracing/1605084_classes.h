@@ -38,26 +38,29 @@ public:
 
     Point3D(double x, double y, double z) : x(x), y(y), z(z) {}
 
-    Point3D operator + (const Point3D& p) const
+    Point3D operator + (const Point3D& rhs) const
     {
-        return Point3D(x + p.x, y + p.y, z + p.z);
+        return Point3D(x + rhs.x, y + rhs.y, z + rhs.z);
     }
 
-    Point3D operator - (const Point3D& p) const
+    Point3D operator - (const Point3D& rhs) const
     {
-        return Point3D(x - p.x, y - p.y, z - p.z);
+        return Point3D(x - rhs.x, y - rhs.y, z - rhs.z);
     }
 
     template<typename T>
-    Point3D operator * (T value) const
+    Point3D operator * (T constant) const
     {
-        return Point3D(x * value, y * value, z * value);
+        return Point3D(x * constant, y * constant, z * constant);
     }
 
-    bool operator == (const Point3D& p) const
+    bool operator == (const Point3D& rhs) const
     {
-        return (x == p.x && y == p.y && z == p.z);
+        return (x == rhs.x && y == rhs.y && z == rhs.z);
     }
+
+    template<typename T>
+    friend Point3D operator*(T constant, Point3D const &rhs);
 
     void normalize_point()
     {
@@ -69,9 +72,9 @@ public:
 
     void printPoint() const
     {
-        cout << "(" << setprecision(7) << fixed << this->x << ", "
-             <<setprecision(7) << fixed << this->y << ", "
-             << setprecision(7) << fixed << this->z << ")" << endl;
+        cout << "(" << setprecision(5) << fixed << this->x << ", "
+             <<setprecision(5) << fixed << this->y << ", "
+             << setprecision(5) << fixed << this->z << ")" << endl;
     }
 
     virtual ~Point3D()
@@ -80,18 +83,19 @@ public:
     }
 };
 
-double vector_dot_product(Point3D a, Point3D b)
+template<typename T>
+inline Point3D operator*(T constant, Point3D const &rhs) {
+    return rhs * constant;
+}
+
+double vector_dot_product(Point3D const &a, Point3D const &b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-Point3D vector_cross_product(Point3D a, Point3D b)
+Point3D vector_cross_product(Point3D const &a, Point3D const &b)
 {
-    Point3D temp;
-    temp.x = a.y * b.z - a.z * b.y;
-    temp.y = a.z * b.x - a.x * b.z;
-    temp.z = a.x * b.y - a.y * b.x;
-    return temp;
+    return Point3D(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
 }
 
 class Light{
