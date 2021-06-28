@@ -4,9 +4,17 @@
 //
 //  Created by Rishov Paul on 26/6/21.
 //
-
+#include <limits>
 #include "1605084_classes.h"
 #include "bitmap_image.hpp"
+
+#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 600
+
+#define FOVY 80
+#define ASPECT_RATIO 1
+#define Z_NEAR_DISTANCE 1
+#define Z_FAR_DISTANCE 1000
 
 #define pi (2*acos(0.0))
 #define MOVE_CONSTANT 2.0
@@ -17,11 +25,10 @@
 //u -- up vector
 //r -- right vector
 //l - look vector
-Point3D pos, u, r, l;
+Point3D eye_pos, up, rght, look;
 
 double cameraHeight;
 double cameraAngle;
-int drawgrid;
 int drawaxes;
 double angle;
 
@@ -110,7 +117,7 @@ void drawSphere(double radius, int slices, int stacks)
     {
         h = radius * sin(((double)i/(double)stacks)*(pi/2));
         r = radius * cos(((double)i/(double)stacks)*(pi/2));
-        //r = 2*radius - r;
+        //r = 2*radius - r; for outward sphere
         for(int j = 0;j <= slices; j++)
         {
             points[i][j].x = r*sin(((double)j/(double)slices)*2*pi);
@@ -152,16 +159,11 @@ void drawSphere(double radius, int slices, int stacks)
 void look_left(double angle)
 {
     //up fixed
-    Point3D temp = l ;
-    l.x = temp.x * cos((double)angle) + (u.y * temp.z - u.z * temp.y) * sin((double)angle);
-    l.y = temp.y * cos((double)angle) + (u.z * temp.x - u.x * temp.z) * sin((double)angle);
-    l.z = temp.z * cos((double)angle) + (u.x * temp.y - u.y * temp.x) * sin((double)angle);
+    Point3D temp = look ;
+    look = temp * cos((double)angle) + vector_cross_product(up, temp) * sin((double)angle);
 
-    temp = r ;
-    r.x = temp.x * cos((double)angle) + (u.y * temp.z - u.z * temp.y) * sin((double)angle);
-    r.y = temp.y * cos((double)angle) + (u.z * temp.x - u.x * temp.z) * sin((double)angle);
-    r.z = temp.z * cos((double)angle) + (u.x * temp.y - u.y * temp.x) * sin((double)angle);
-
+    temp = rght;
+    rght = temp * cos((double)angle) + vector_cross_product(up, temp) * sin((double)angle);
 }
 
 void look_right(double angle)
@@ -173,15 +175,11 @@ void look_right(double angle)
 void look_up(double angle)
 {
     //r fixed
-    Point3D temp = u ;
-    u.x = temp.x * cos((double)angle) + (r.y * temp.z - r.z * temp.y) * sin((double)angle);
-    u.y = temp.y * cos((double)angle) + (r.z * temp.x - r.x * temp.z) * sin((double)angle);
-    u.z = temp.z * cos((double)angle) + (r.x * temp.y - r.y * temp.x) * sin((double)angle);
+    Point3D temp = up ;
+    up = temp * cos((double)angle) + vector_cross_product(rght, temp) * sin((double)angle);
 
-    temp = l ;
-    l.x = temp.x * cos((double)angle) + (r.y * temp.z - r.z * temp.y) * sin((double)angle);
-    l.y = temp.y * cos((double)angle) + (r.z * temp.x - r.x * temp.z) * sin((double)angle);
-    l.z = temp.z * cos((double)angle) + (r.x * temp.y - r.y * temp.x) * sin((double)angle);
+    temp = look ;
+    look = temp * cos((double)angle) + vector_cross_product(rght, temp) * sin((double)angle);
 }
 
 void look_down(double angle)
@@ -194,16 +192,11 @@ void tilt_clockwise(double angle)
 {
     //l fixed
     angle = (-1)*angle;
-    Point3D temp = u ;
-    u.x = temp.x * cos((double)angle) + (l.y * temp.z - l.z * temp.y) * sin((double)angle);
-    u.y = temp.y * cos((double)angle) + (l.z * temp.x - l.x * temp.z) * sin((double)angle);
-    u.z = temp.z * cos((double)angle) + (l.x * temp.y - l.y * temp.x) * sin((double)angle);
+    Point3D temp = up ;
+    up = temp * cos((double)angle) + vector_cross_product(look, temp) * sin((double)angle);
 
-    temp = r ;
-    r.x = temp.x * cos((double)angle) + (l.y * temp.z - l.z * temp.y) * sin((double)angle);
-    r.y = temp.y * cos((double)angle) + (l.z * temp.x - l.x * temp.z) * sin((double)angle);
-    r.z = temp.z * cos((double)angle) + (l.x * temp.y - l.y * temp.x) * sin((double)angle);
-
+    temp = rght ;
+    rght = temp * cos((double)angle) + vector_cross_product(look, temp) * sin((double)angle);
 }
 
 void tilt_anticlockwise(double angle)
@@ -212,8 +205,80 @@ void tilt_anticlockwise(double angle)
     tilt_clockwise(angle);
 }
 
+double degreeToRadianAngle(double degree)
+{
+    return pi / 180 * degree;
+}
+
+void capture()
+{
+    //initialize bitmap image and set background color to black
+    bitmap_image image(image_width, image_height); //col x row
+    for(int i = 0; i < image_height; i++)
+    {
+        for(int j = 0; j < image_width; j++)
+        {
+            image.set_pixel(j, i, 0, 0, 0);
+        }
+    }
+
+    double plane_distance = (WINDOW_HEIGHT / 2.0) / tan(degreeToRadianAngle(FOVY / 2.0));
+    Point3D top_left = eye_pos + look * plane_distance - rght * (WINDOW_HEIGHT / 2.0) + up * (WINDOW_HEIGHT / 2.0);
+    double du = (double) WINDOW_WIDTH / image_width;
+    double dv = (double) WINDOW_HEIGHT / image_height;
+
+    // Choose middle of the grid cell
+    top_left = top_left + rght * (0.5 * du) - up * (0.5 * dv);
+
+    for(int i = 0; i < image_height; i++)
+    {
+        for(int j = 0; j < image_width; j++)
+        {
+            int nearest = -1; //stores the nearest object index
+            double t;
+            double t_min = numeric_limits<double>::max();
+            vector<double> dummy_color(3);
+            
+            Point3D current_pixel = top_left + rght * (j * du) - up * (i * dv);
+            
+            //cast ray from eye to (curPixel-eye) direction
+            Ray ray(eye_pos, current_pixel - eye_pos);
+            
+            for(int k = 0; k < objects.size(); k++)
+            {
+                t = objects[k]->intersect(ray, dummy_color, 0);
+                
+                if(t < t_min && t > 0)
+                {
+                    t_min = t;
+                    nearest = k;
+                }
+            }
+            
+            if(nearest != -1)
+            {
+                t_min = objects[nearest]->intersect(ray, dummy_color, 1);
+            }
+            
+            //dummy color check if less than 0 or greater than 1 needed?
+            for(int x = 0; x < 3; x++)
+            {
+                if(dummy_color[x] < 0.0) dummy_color[x] = 0.0;
+                if(dummy_color[x] > 1.0) dummy_color[x] = 1.0;
+            }
+            //update image pixel (i,j)
+            image.set_pixel(j, i, dummy_color[0] * 255, dummy_color[1] * 255, dummy_color[2] * 255);
+        }
+    }
+    image.save_image("1605084_ray_tracing.bmp");
+    image.clear();
+}
+
 void keyboardListener(unsigned char key, int x,int y){
     switch(key){
+        case '0':
+            capture();
+            break;
         case '1':
             look_left(pi / 18 * ROTATION_CONSTANT);
             break;
@@ -241,28 +306,28 @@ void specialKeyListener(int key, int x, int y){
     switch(key){
         case GLUT_KEY_DOWN:        //down arrow key
             cameraHeight -= 3.0;
-            pos = pos - l * MOVE_CONSTANT;
+            eye_pos = eye_pos - look * MOVE_CONSTANT;
             break;
             
         case GLUT_KEY_UP:        // up arrow key
             cameraHeight += 3.0;
-            pos = pos + l * MOVE_CONSTANT;
+            eye_pos = eye_pos + look * MOVE_CONSTANT;
             break;
 
         case GLUT_KEY_RIGHT:
-            pos = pos + r * MOVE_CONSTANT;
+            eye_pos = eye_pos + rght * MOVE_CONSTANT;
             break;
             
         case GLUT_KEY_LEFT:
-            pos = pos - r * MOVE_CONSTANT;
+            eye_pos = eye_pos - rght * MOVE_CONSTANT;
             break;
 
         case GLUT_KEY_PAGE_UP:
-            pos = pos + u * MOVE_CONSTANT;
+            eye_pos = eye_pos + up * MOVE_CONSTANT;
             break;
             
         case GLUT_KEY_PAGE_DOWN:
-            pos = pos - u * MOVE_CONSTANT;
+            eye_pos = eye_pos - up * MOVE_CONSTANT;
             break;
         default:
             break;
@@ -277,15 +342,15 @@ void mouseListener(int button, int state, int x, int y)
                 drawaxes = 1 - drawaxes;
             }
             break;
-
+            
         case GLUT_RIGHT_BUTTON:
             //........
             break;
-
+            
         case GLUT_MIDDLE_BUTTON:
             //........
             break;
-
+            
         default:
             break;
     }
@@ -311,7 +376,7 @@ void display(){
     //2. where is the camera looking?
     //3. Which direction is the camera's UP direction?
 
-    gluLookAt(pos.x, pos.y, pos.z,     pos.x+l.x, pos.y+l.y, pos.z+l.z,    u.x, u.y, u.z);
+    gluLookAt(eye_pos.x, eye_pos.y, eye_pos.z,     eye_pos.x+look.x, eye_pos.y+look.y, eye_pos.z+look.z,    up.x, up.y, up.z);
 
 
     //again select MODEL-VIEW
@@ -324,6 +389,13 @@ void display(){
         //add objects
 
     drawAxes();
+    
+    //draw Light Sources
+    if(lights.size() == 0) return;
+    for(int i = 0; i < lights.size(); i++)
+    {
+        lights[i].draw_light_source();
+    }
 
     //draw Objects
     for(int i = 0; i < objects.size(); i++)
@@ -331,11 +403,7 @@ void display(){
         objects[i]->draw();
     }
     
-    //draw Light Sources
-    for(int i = 0; i < lights.size(); i++)
-    {
-        lights[i].draw_light_source();
-    }
+    
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
@@ -350,26 +418,25 @@ void animate(){
 void init()
 {
     //codes for initialization
-    drawgrid=0;
     drawaxes = 1;
     cameraHeight = 150.0;
     cameraAngle = 1.0;
     angle = 0;
 
     //initialization of pos, u, r, l vectors
-    pos.x = pos.y = 120;
-    pos.z = 20;
+    eye_pos.x = eye_pos.y = 120;
+    eye_pos.z = 20;
 
-    u.x = u.y = 0;
-    u.z = 1;
+    up.x = up.y = 0;
+    up.z = 1;
 
-    r.x = (double)-1/sqrt(2);
-    r.y = (double)1/sqrt(2);
-    r.z = 0;
+    rght.x = (double)-1/sqrt(2);
+    rght.y = (double)1/sqrt(2);
+    rght.z = 0;
 
-    l.x = (double)-1/sqrt(2);
-    l.y = (double)-1/sqrt(2);
-    l.z = 0;
+    look.x = (double)-1/sqrt(2);
+    look.y = (double)-1/sqrt(2);
+    look.z = 0;
 
 
 
@@ -387,7 +454,7 @@ void init()
     glLoadIdentity();
 
     //give PERSPECTIVE parameters
-    gluPerspective(80,    1,    1,    1000.0);
+    gluPerspective(FOVY, ASPECT_RATIO, Z_NEAR_DISTANCE, Z_FAR_DISTANCE);
     //field of view in the Y (vertically)
     //aspect ratio that determines the field of view in the X direction (horizontally)
     //near distance
@@ -482,19 +549,22 @@ void load_data()
     object->set_reflection_coefficients(0.5, 0.3, 0.3, 0.3);
     object->set_shininess(5);
     objects.push_back(object);
+    
+    //objects[objects.size() - 1]->print_object();
 }
+
 
 int main(int argc, char **argv) {
     /* *************** File Read **********************************/
     
-    freopen("/Users/rishovpaul/Desktop/scene.txt", "r", stdin);
+    freopen("scene.txt", "r", stdin);
     load_data();
     
     //project location ---> cd Documents/Academics/4-1/"Computer Graphics Sessional"/Offline3/"Ray Tracing"
     
     /* ***********************************************************/
     glutInit(&argc,argv);
-    glutInitWindowSize(600, 600);
+    glutInitWindowSize(WINDOW_WIDTH , WINDOW_HEIGHT);
     glutInitWindowPosition(0, 0);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);  //Depth, Double buffer, RGB color
 

@@ -14,7 +14,7 @@
 #ifdef __APPLE__
 
 #include <GLUT/glut.h>
-
+#define GL_SILENCE_DEPRECATION
 #else
 
 #include <windows.h>
@@ -22,7 +22,7 @@
 
 #endif
 
-
+#define epsilon 0.0000001
 
 using namespace std;
 
@@ -149,29 +149,29 @@ public:
 class Ray{
 
 public:
-    Point3D start, dir;
+    Point3D start, direction;
     Ray()
     {
-        this->start = this->dir = Point3D(0, 0, 0);
+        this->start = this->direction = Point3D(0, 0, 0);
     }
 
-    Ray(Point3D start, Point3D dir)
+    Ray(Point3D start, Point3D direction)
     {
         this->start = start;
-        this->dir = dir; // normalize for easier calculations
-        this->dir.normalize_point();
+        this->direction = direction; // normalize for easier calculations
+        this->direction.normalize_point();
     }
 
     void print_ray()
     {
-        cout << "Start: ";
+        cout << "Start or Origin of the ray: ";
         start.printPoint();
-        cout << "Dir: ";
-        dir.printPoint();
+        cout << "Direction of the ray: ";
+        direction.printPoint();
     }
 
     virtual ~Ray() {
-        this->start = this->dir = Point3D();
+        this->start = this->direction = Point3D();
     }
 };
 
@@ -215,12 +215,22 @@ public:
     }
 
     virtual void draw(){}
-
-    virtual double intersect(Ray &ray, vector<double> current_color, int level)
+    
+    virtual Point3D get_normal_vector()
+    {
+        return Point3D(); //origin
+    }
+    
+    virtual double get_intersection_point_t_value(Ray ray)
     {
         return -1;
     }
 
+    virtual double intersect(Ray ray, vector<double> &changed_color, int level)
+    {
+        return -1;
+    }
+    
     virtual void print_object()
     {
 
@@ -252,6 +262,55 @@ public:
         glColor3f(color[0], color[1], color[2]);
         glutSolidSphere(height, 200, 200);
         glPopMatrix();
+    }
+    
+    double get_intersection_point_t_value(Ray ray)
+    {
+        //Geometric Ray-Sphere Intersection
+        Point3D Ro = Point3D(ray.start - reference_point); // ro = ro - center(stored in reference point)
+        double radius = height;
+
+        double Ro_dot_Ro = vector_dot_product(Ro, Ro);
+        double tp = vector_dot_product((-1) * Ro, ray.direction);
+        double d_square = vector_dot_product(Ro, Ro) - tp * tp;
+        double r_square = radius * radius;
+        double t_prime = sqrt(r_square - d_square);
+
+        if(tp < 0 || d_square > r_square) return -1.0;
+
+        double t;
+
+        if(Ro_dot_Ro < r_square) //ray origin inside sphere
+        {
+            t = tp + t_prime;
+        }
+        else if(Ro_dot_Ro > r_square)//ray origin outside sphere
+        {
+            t = tp - t_prime;
+        }
+        else //ray origin on sphere
+        {
+            //confused
+            t = tp;
+        }
+        return t;
+    }
+
+    double intersect(Ray ray, vector<double> &changed_color, int level)
+    {
+        double t = get_intersection_point_t_value(ray);
+
+        if(t <= 0 ) return -1.0;
+
+        //near and far plane check needed??
+
+        if(level == 0) return t;
+
+        for (int i = 0; i < 3; i++)
+        {
+            changed_color[i] = color[i] * reflection_coefficients[0];
+        }
+        return t;
     }
 
     void print_object()
@@ -293,6 +352,50 @@ public:
         triangle_end_points[0] = a;
         triangle_end_points[1] = b;
         triangle_end_points[2] = c;
+    }
+    
+    double get_intersection_point_t_value(Ray ray)
+    {
+        //Moller–Trumbore ray-triangle intersection algorithm
+        Point3D edge1 = triangle_end_points[1] - triangle_end_points[0];
+        Point3D edge2 = triangle_end_points[2] - triangle_end_points[0];
+        Point3D h = vector_cross_product(ray.direction, edge2);
+        double a = vector_dot_product(edge1, h);
+        
+        if(a > -epsilon && a < epsilon) return -1.0;// This ray is parallel to this triangle.
+        
+        double f = 1.0 / a;
+        Point3D s = ray.start - triangle_end_points[0];
+        double u = f * vector_dot_product(s, h);
+        
+        if(u < 0.0 || u > 1.0) return -1.0;
+        
+        Point3D q = vector_cross_product(s, edge1);
+        double v = f * vector_dot_product(ray.direction, q);
+        
+        if(v < 0.0 || u + v > 1.0) return -1.0;
+        
+        /* At this stage we can compute t to find out where the intersection point is on the line. */
+        double t = f * vector_dot_product(edge2, q);
+        
+        if(t > epsilon) return t;
+        else return -1.0;
+    }
+    
+    double intersect(Ray ray, vector<double> &changed_color, int level)
+    {
+        double t = get_intersection_point_t_value(ray);
+        if(t <= 0 ) return -1.0;
+        
+        //near and far plane check needed??
+        
+        if(level == 0) return t;
+        
+        for (int i = 0; i < 3; i++)
+        {
+            changed_color[i] = color[i] * reflection_coefficients[0];
+        }
+        return t;
     }
     
     void draw()
@@ -350,6 +453,23 @@ public:
     {
         
     }
+    
+//    double intersect(Ray ray, vector<double> &changed_color, int level)
+//    {
+//        double t = get_intersection_point_t_value(ray);
+//
+//        if(t <= 0 ) return -1.0;
+//
+//        //near and far plane check needed??
+//
+//        if(level == 0) return t;
+//
+//        for (int i = 0; i < 3; i++)
+//        {
+//            changed_color[i] = color[i] * reflection_coefficients[0];
+//        }
+//        return t;
+//    }
 
     void print_object()
     {
@@ -398,6 +518,70 @@ public:
         this->length = tile_width; // object class length = tile_width
         reference_point = Point3D(-floor_width/2, -floor_width/2, 0); //leftmost bottom corner of the XY plane
     }
+    
+    Point3D get_normal_vector()
+    {
+        return Point3D(0, 0, 1); //In XY plane normal is Z axis
+    }
+    
+    bool is_within_boundary(Point3D const &point)
+    {
+        if(point.x < reference_point.x || point.x > -reference_point.x || point.y < reference_point.y || point.y > -reference_point.y)
+        {
+            return false;
+        }
+        else return true;
+    }
+    
+    double intersection_point_t_value(Ray ray)
+    {
+        /*
+         ray : P(t) = Ro + t * Rd
+         plane: H(P) = n·P + D = 0   here n = normal
+         n·(Ro + t * Rd) + D = 0
+         t = -(D + n·Ro) / n·Rd
+         
+         for floor: D = 0 and t = - ray.start.z / ray.direction.z
+         */
+        //if(ray.direction.z == 0) return -1.0;//denom check
+        
+        double t = (double) -(ray.start.z / ray.direction.z);
+        
+        return t;
+    }
+    
+    double intersect(Ray ray, vector<double> &changed_color, int level)
+    {
+        double t = get_intersection_point_t_value(ray);
+        
+        Point3D intersecting_vector = ray.start + t * ray.direction;
+        
+        //cout << "hello" <<endl;
+        
+        if(!is_within_boundary(intersecting_vector)) return -1.0;
+
+        //cout << "bye : " << level <<endl;
+        //near and far plane check needed??
+
+        if(level == 0) return t;
+        
+        cout << "hello bye" <<endl;
+        
+        int tile_pixel_x = intersecting_vector.x - reference_point.x;
+        int tile_pixel_y = intersecting_vector.y - reference_point.y;
+        
+        int tile_x_index = tile_pixel_x / length;
+        int tile_y_index = tile_pixel_y / length;
+        
+        
+        for (int i = 0; i < 3; i++)
+        {
+            changed_color[i] = (tile_x_index + tile_y_index + 1) % 2;
+            cout << changed_color[i] << "   " ;
+        }
+        cout << endl;
+        return t;
+    }
 
     void draw()
     {
@@ -409,8 +593,8 @@ public:
             {
                 for (int j = 0; j < num_of_tiles; j++)
                 {
-                    int c = (i + j) % 2;
-                    glColor3f(!c, !c, !c); //starts with white from leftmost bottom of the plane
+                    int c = (i + j + 1) % 2;
+                    glColor3f(c, c, c); //odd(c = 1) - white tile  even(c = 0) - black tile
                     
                     glVertex3f(reference_point.x + i * length, reference_point.y + j * length, reference_point.z);
                     glVertex3f(reference_point.x + (i + 1) * length, reference_point.y + j * length, reference_point.z);
@@ -420,6 +604,32 @@ public:
             }
         }
         glEnd();
+    }
+    
+    void print_object()
+    {
+        cout << "Floor Info:" << endl;
+
+        cout << "Reference Point: ";
+        reference_point.printPoint();
+
+        cout << "Floor Width: " << width << "   Tile Width: " << length << endl;
+        
+
+        cout << "color array: ";
+        for(int i = 0; i < color.size(); i++)
+        {
+            cout << color[i] << "   ";
+        }
+
+        cout << "\nReflection CoEfficients array: ";
+        for(int i = 0; i < reflection_coefficients.size(); i++)
+        {
+            cout << reflection_coefficients[i] << "   ";
+        }
+        cout << endl;
+
+        cout << "Shininess: " << shininess << endl << endl;
     }
 
     ~Floor()
