@@ -216,9 +216,9 @@ public:
 
     virtual void draw(){}
     
-    virtual Point3D get_normal_vector()
+    virtual Point3D get_normal_vector(Point3D const &intersection_point)
     {
-        return Point3D(); //origin
+        return Point3D();//origin
     }
     
     virtual double get_intersection_point_t_value(Ray ray)
@@ -264,7 +264,15 @@ public:
         glPopMatrix();
     }
     
-    double get_intersection_point_t_value(Ray ray)
+    Point3D get_normal_vector(Point3D const &intersection_point) override
+    {
+        Point3D normal(intersection_point - reference_point);
+        normal.normalize_point();
+        
+        return normal;
+    }
+    
+    double get_intersection_point_t_value(Ray ray) override
     {
         //Geometric Ray-Sphere Intersection
         Point3D Ro = Point3D(ray.start - reference_point); // ro = ro - center(stored in reference point)
@@ -293,7 +301,7 @@ public:
         return t;
     }
 
-    double intersect(Ray ray, vector<double> &changed_color, int level)
+    double intersect(Ray ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
 
@@ -310,7 +318,7 @@ public:
         return t;
     }
 
-    void print_object()
+    void print_object() override
     {
         cout << "Sphere Info: " << endl;
         cout << "Center: ";
@@ -351,7 +359,17 @@ public:
         triangle_end_points[2] = c;
     }
     
-    double get_intersection_point_t_value(Ray ray)
+    Point3D get_normal_vector(Point3D const &intersection_point) override
+    {
+        Point3D edge1 = triangle_end_points[1] - triangle_end_points[0];
+        Point3D edge2 = triangle_end_points[2] - triangle_end_points[0];
+        Point3D normal = vector_cross_product(edge1, edge2);
+        normal.normalize_point();
+        
+        return normal;
+    }
+    
+    double get_intersection_point_t_value(Ray ray) override
     {
         //Moller–Trumbore ray-triangle intersection algorithm
         Point3D edge1 = triangle_end_points[1] - triangle_end_points[0];
@@ -379,7 +397,7 @@ public:
         else return -1.0;
     }
     
-    double intersect(Ray ray, vector<double> &changed_color, int level)
+    double intersect(Ray ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
         if(t <= 0 ) return -1.0;
@@ -395,7 +413,7 @@ public:
         return t;
     }
     
-    void draw()
+    void draw() override
     {
         glColor3f(color[0], color[1], color[2]);
         glBegin(GL_TRIANGLES);
@@ -407,7 +425,7 @@ public:
         glEnd();
     }
 
-    void print_object()
+    void print_object() override
     {
         cout << "\nTriangle Info" << endl;
         for(int i = 0; i < 3; i++)
@@ -446,9 +464,26 @@ public:
         gen_obj_coefficients.resize(10);
     }
     
-    void draw()
+    void draw() override
     {
         
+    }
+    
+    Point3D get_normal_vector(Point3D const &intersection_point) override
+    {
+        //del F / del x = 2Ax + Dy + Ez + G
+        double normal_x = 2 * gen_obj_coefficients[0] * intersection_point.x + gen_obj_coefficients[3] * intersection_point.y + gen_obj_coefficients[4] * intersection_point.z + gen_obj_coefficients[6];
+        
+        //del F / del y = 2By + Dx + Fz + H
+        double normal_y = 2 * gen_obj_coefficients[1] * intersection_point.y + gen_obj_coefficients[3] * intersection_point.x + gen_obj_coefficients[5] * intersection_point.z + gen_obj_coefficients[7];
+        
+        //del F / del z = 2Cz + Ex + Fy + I
+        double normal_z = 2 * gen_obj_coefficients[2] * intersection_point.z + gen_obj_coefficients[4] * intersection_point.x + gen_obj_coefficients[5] * intersection_point.y + gen_obj_coefficients[8];
+        
+        Point3D normal(normal_x, normal_y, normal_z);
+        normal.normalize_point();
+        
+        return normal;
     }
     
     bool is_within_cube(Point3D const &intersection_point)
@@ -480,13 +515,13 @@ public:
         return is_within;
     }
     
-    double get_intersection_point_t_value(Ray ray)
+    double get_intersection_point_t_value(Ray ray) override
     {
-        double a = gen_obj_coefficients[0] * ray.direction.x * ray.direction.x + gen_obj_coefficients[1] * ray.direction.y * ray.direction.y + gen_obj_coefficients[2] * ray.direction.z * ray.direction.z + gen_obj_coefficients[3] * ray.direction.x * ray.direction.y + gen_obj_coefficients[4] * ray.direction.y * ray.direction.z + gen_obj_coefficients[5] * ray.direction.x * ray.direction.z;
+        double a = gen_obj_coefficients[0] * ray.direction.x * ray.direction.x + gen_obj_coefficients[1] * ray.direction.y * ray.direction.y + gen_obj_coefficients[2] * ray.direction.z * ray.direction.z + gen_obj_coefficients[3] * ray.direction.x * ray.direction.y + gen_obj_coefficients[4] * ray.direction.x * ray.direction.z + gen_obj_coefficients[5] * ray.direction.y * ray.direction.z ;
         
-        double b = 2 * gen_obj_coefficients[0] * ray.start.x * ray.direction.x + 2 * gen_obj_coefficients[1] * ray.start.y * ray.direction.y + 2 * gen_obj_coefficients[2] * ray.start.z * ray.direction.z + gen_obj_coefficients[3] * ray.start.x * ray.direction.y + gen_obj_coefficients[3] * ray.start.y * ray.direction.x + gen_obj_coefficients[4] * ray.start.y * ray.direction.z + gen_obj_coefficients[4] * ray.start.z * ray.direction.y + gen_obj_coefficients[5] * ray.start.x * ray.direction.z + gen_obj_coefficients[5] * ray.start.z * ray.direction.x + gen_obj_coefficients[6] * ray.direction.x + gen_obj_coefficients[7] * ray.direction.y + gen_obj_coefficients[8] * ray.direction.z;
+        double b = 2 * gen_obj_coefficients[0] * ray.start.x * ray.direction.x + 2 * gen_obj_coefficients[1] * ray.start.y * ray.direction.y + 2 * gen_obj_coefficients[2] * ray.start.z * ray.direction.z + gen_obj_coefficients[3] * ray.start.x * ray.direction.y + gen_obj_coefficients[3] * ray.start.y * ray.direction.x + gen_obj_coefficients[4] * ray.start.x * ray.direction.z + gen_obj_coefficients[4] * ray.start.z * ray.direction.x + gen_obj_coefficients[5] * ray.start.y * ray.direction.z + gen_obj_coefficients[5] * ray.start.z * ray.direction.y + gen_obj_coefficients[6] * ray.direction.x + gen_obj_coefficients[7] * ray.direction.y + gen_obj_coefficients[8] * ray.direction.z;
         
-        double c = gen_obj_coefficients[0] * ray.start.x * ray.start.x + gen_obj_coefficients[1] * ray.start.y * ray.start.y + gen_obj_coefficients[2] * ray.start.z * ray.start.z + gen_obj_coefficients[3] * ray.start.x * ray.start.y + gen_obj_coefficients[4] * ray.start.y * ray.start.z + gen_obj_coefficients[5] * ray.start.x * ray.start.z + gen_obj_coefficients[6] * ray.start.x + gen_obj_coefficients[7] * ray.start.y + gen_obj_coefficients[8] * ray.start.z + gen_obj_coefficients[9];
+        double c = gen_obj_coefficients[0] * ray.start.x * ray.start.x + gen_obj_coefficients[1] * ray.start.y * ray.start.y + gen_obj_coefficients[2] * ray.start.z * ray.start.z + gen_obj_coefficients[3] * ray.start.x * ray.start.y + gen_obj_coefficients[4] * ray.start.x * ray.start.z + gen_obj_coefficients[5] * ray.start.y * ray.start.z + gen_obj_coefficients[6] * ray.start.x + gen_obj_coefficients[7] * ray.start.y + gen_obj_coefficients[8] * ray.start.z + gen_obj_coefficients[9];
         
         //double t = -1.0;
         
@@ -510,7 +545,7 @@ public:
         else return -1;
     }
     
-    double intersect(Ray ray, vector<double> &changed_color, int level)
+    double intersect(Ray ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
 
@@ -527,7 +562,7 @@ public:
         return t;
     }
 
-    void print_object()
+    void print_object() override
     {
         cout << "General Object Info:" << endl;
         
@@ -540,7 +575,7 @@ public:
         
         cout << "General Object Equation: ";
         string eq = "";
-        vector<string> vec = {"x^2", "y^2", "z^2", "xy", "yz", "zx", "x", "y", "z", " = 0"};
+        vector<string> vec = {"x^2", "y^2", "z^2", "xy", "zx", "yz", "x", "y", "z", " = 0"};
         for(int i = 0; i < 9; i++)
         {
             eq += to_string(gen_obj_coefficients[i]);
@@ -593,7 +628,7 @@ public:
         reference_point = Point3D(-floor_width/2, -floor_width/2, 0); //leftmost bottom corner of the XY plane
     }
     
-    Point3D get_normal_vector()
+    Point3D get_normal_vector(Point3D const &intersection_point) override
     {
         return Point3D(0, 0, 1); //In XY plane normal is Z axis
     }
@@ -607,7 +642,7 @@ public:
         else return true;
     }
     
-    double get_intersection_point_t_value(Ray ray)
+    double get_intersection_point_t_value(Ray ray) override
     {
         /*
          ray : P(t) = Ro + t * Rd
@@ -626,7 +661,7 @@ public:
         return t;
     }
     
-    double intersect(Ray ray, vector<double> &changed_color, int level)
+    double intersect(Ray ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
         
@@ -651,7 +686,7 @@ public:
         return t;
     }
 
-    void draw()
+    void draw() override
     {
         int num_of_tiles = this->width / this->length; //In a row or in a column
         
@@ -674,7 +709,7 @@ public:
         glEnd();
     }
     
-    void print_object()
+    void print_object() override
     {
         cout << "Floor Info:" << endl;
 

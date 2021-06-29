@@ -43,8 +43,6 @@ vector<Object*> objects;
 vector<Light> lights;
 
 
-
-
 using namespace std;
 
 /* **************** OPENGL Functions ****************** */
@@ -73,89 +71,6 @@ void drawAxes()
     }
 }
 
-void drawSquare(double a, vector<double> c)
-{
-    glColor3f(c[0], c[1], c[2]);
-    glBegin(GL_QUADS);{
-        glVertex3f( a, a,2);
-        glVertex3f( a,-a,2);
-        glVertex3f(-a,-a,2);
-        glVertex3f(-a, a,2);
-    }glEnd();
-}
-
-void drawCircle(double radius,int segments)
-{
-    int i;
-    vector<Point3D> points(100);
-    glColor3f(0.7,0.7,0.7);
-    //generate points
-    for(i=0;i<=segments;i++)
-    {
-        points[i].x=radius*cos(((double)i/(double)segments)*2*pi);
-        points[i].y=radius*sin(((double)i/(double)segments)*2*pi);
-    }
-    //draw segments using generated points
-    for(i=0;i<segments;i++)
-    {
-        glBegin(GL_LINES);
-        {
-            glVertex3f(points[i].x,points[i].y,0);
-            glVertex3f(points[i+1].x,points[i+1].y,0);
-        }
-        glEnd();
-    }
-}
-
-void drawSphere(double radius, int slices, int stacks)
-{
-    //Point3D points[100][100];
-    vector<vector<Point3D>> points( 100 , vector<Point3D> (100));
-    double h, r;
-    //generate points
-    for(int i = 0; i <= stacks; i++)
-    {
-        h = radius * sin(((double)i/(double)stacks)*(pi/2));
-        r = radius * cos(((double)i/(double)stacks)*(pi/2));
-        //r = 2*radius - r; for outward sphere
-        for(int j = 0;j <= slices; j++)
-        {
-            points[i][j].x = r*sin(((double)j/(double)slices)*2*pi);
-            points[i][j].y = h;
-            points[i][j].z = r*cos(((double)j/(double)slices)*2*pi);
-        }
-    }
-    //draw quads using generated points
-    for(int i = 0; i < stacks; i++)
-    {
-        for(int j = 0; j < slices; j++)
-        {
-            if(j % 2 == 0)
-            {
-                glColor3f(1,1,1);
-            }
-            else
-            {
-                glColor3f(0,0,0);
-            }
-            glBegin(GL_QUADS);
-            {
-                //upper hemisphere
-                glVertex3f(points[i][j].x, points[i][j].y, points[i][j].z);
-                glVertex3f(points[i][j+1].x, points[i][j+1].y, points[i][j+1].z);
-                glVertex3f(points[i+1][j+1].x, points[i+1][j+1].y, points[i+1][j+1].z);
-                glVertex3f(points[i+1][j].x, points[i+1][j].y, points[i+1][j].z);
-                //lower hemisphere
-                glVertex3f(points[i][j].x, -points[i][j].y, points[i][j].z);
-                glVertex3f(points[i][j+1].x, -points[i][j+1].y, points[i][j+1].z);
-                glVertex3f(points[i+1][j+1].x, -points[i+1][j+1].y, points[i+1][j+1].z);
-                glVertex3f(points[i+1][j].x, -points[i+1][j].y, points[i+1][j].z);
-            }
-            glEnd();
-        }
-    }
-}
-
 void look_left(double angle)
 {
     //up fixed
@@ -174,7 +89,7 @@ void look_right(double angle)
 
 void look_up(double angle)
 {
-    //r fixed
+    //right fixed
     Point3D temp = up ;
     up = temp * cos((double)angle) + vector_cross_product(rght, temp) * sin((double)angle);
 
@@ -190,7 +105,7 @@ void look_down(double angle)
 
 void tilt_clockwise(double angle)
 {
-    //l fixed
+    //look fixed
     angle = (-1)*angle;
     Point3D temp = up ;
     up = temp * cos((double)angle) + vector_cross_product(look, temp) * sin((double)angle);
@@ -396,8 +311,6 @@ void display(){
     {
         objects[i]->draw();
     }
-    
-    
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
@@ -518,7 +431,7 @@ void load_data()
         object->set_reflection_coefficients(amb, dif, spec, rec_ref);
         object->set_shininess(shininess);
 
-        object->print_object();
+        //object->print_object();
 
         objects.push_back(object);
     }
