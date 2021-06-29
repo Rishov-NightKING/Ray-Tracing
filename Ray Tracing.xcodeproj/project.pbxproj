@@ -10,8 +10,8 @@
 		A7126D9526877028008DA7EE /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A7126D9426877028008DA7EE /* main.cpp */; };
 		A7126D9D2687703F008DA7EE /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A7126D9C2687703F008DA7EE /* OpenGL.framework */; };
 		A7126D9F26877057008DA7EE /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A7126D9E26877057008DA7EE /* GLUT.framework */; };
+		A77507D9268AFCF40046EED7 /* 1605084_classes.h in Sources */ = {isa = PBXBuildFile; fileRef = A75745FE268776AE00005F6F /* 1605084_classes.h */; };
 		A78308D9268A8847000D1562 /* bitmap_image.hpp in Sources */ = {isa = PBXBuildFile; fileRef = A7574600268776E000005F6F /* bitmap_image.hpp */; };
-		A78308DA268A8847000D1562 /* 1605084_classes.h in Sources */ = {isa = PBXBuildFile; fileRef = A75745FE268776AE00005F6F /* 1605084_classes.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -142,8 +142,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A77507D9268AFCF40046EED7 /* 1605084_classes.h in Sources */,
 				A78308D9268A8847000D1562 /* bitmap_image.hpp in Sources */,
-				A78308DA268A8847000D1562 /* 1605084_classes.h in Sources */,
 				A7126D9526877028008DA7EE /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -274,25 +274,22 @@ public:
         double tp = vector_dot_product((-1) * Ro, ray.direction);
         double d_square = vector_dot_product(Ro, Ro) - tp * tp;
         double r_square = radius * radius;
-        double t_prime = sqrt(r_square - d_square);
+        
 
-        if(tp < 0 || d_square > r_square) return -1.0;
+        if(tp < 0 || d_square > r_square) return -1.0; //tp < 0 ---> object is beside the eye.  d^2 > r^2 --->ray is going away from circle
 
-        double t;
+        double t_prime = sqrt(r_square - d_square); // d^2 <= r^2
+        double t = -1.0;
 
-        if(Ro_dot_Ro < r_square) //ray origin inside sphere
+        if(Ro_dot_Ro < r_square) //ray origin(eye) inside sphere
         {
             t = tp + t_prime;
         }
-        else if(Ro_dot_Ro > r_square)//ray origin outside sphere
+        else if(Ro_dot_Ro >= r_square)//ray origin(eye) outside or on sphere
         {
             t = tp - t_prime;
         }
-        else //ray origin on sphere
-        {
-            //confused
-            t = tp;
-        }
+        
         return t;
     }
 
@@ -533,7 +530,7 @@ public:
         else return true;
     }
     
-    double intersection_point_t_value(Ray ray)
+    double get_intersection_point_t_value(Ray ray)
     {
         /*
          ray : P(t) = Ro + t * Rd
@@ -543,10 +540,12 @@ public:
          
          for floor: D = 0 and t = - ray.start.z / ray.direction.z
          */
-        //if(ray.direction.z == 0) return -1.0;//denom check
-        
-        double t = (double) -(ray.start.z / ray.direction.z);
-        
+        double t = -1.0;
+        if(ray.direction.z != 0)//denom check
+        {
+            t = (double) -(ray.start.z / ray.direction.z);
+        }
+    
         return t;
     }
     
@@ -556,16 +555,11 @@ public:
         
         Point3D intersecting_vector = ray.start + t * ray.direction;
         
-        //cout << "hello" <<endl;
-        
         if(!is_within_boundary(intersecting_vector)) return -1.0;
-
-        //cout << "bye : " << level <<endl;
+        
         //near and far plane check needed??
 
         if(level == 0) return t;
-        
-        cout << "hello bye" <<endl;
         
         int tile_pixel_x = intersecting_vector.x - reference_point.x;
         int tile_pixel_y = intersecting_vector.y - reference_point.y;
@@ -573,13 +567,10 @@ public:
         int tile_x_index = tile_pixel_x / length;
         int tile_y_index = tile_pixel_y / length;
         
-        
         for (int i = 0; i < 3; i++)
         {
             changed_color[i] = (tile_x_index + tile_y_index + 1) % 2;
-            cout << changed_color[i] << "   " ;
         }
-        cout << endl;
         return t;
     }
 

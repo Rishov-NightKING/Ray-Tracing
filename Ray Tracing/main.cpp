@@ -260,12 +260,6 @@ void capture()
                 t_min = objects[nearest]->intersect(ray, dummy_color, 1);
             }
             
-            //dummy color check if less than 0 or greater than 1 needed?
-            for(int x = 0; x < 3; x++)
-            {
-                if(dummy_color[x] < 0.0) dummy_color[x] = 0.0;
-                if(dummy_color[x] > 1.0) dummy_color[x] = 1.0;
-            }
             //update image pixel (i,j)
             image.set_pixel(j, i, dummy_color[0] * 255, dummy_color[1] * 255, dummy_color[2] * 255);
         }
