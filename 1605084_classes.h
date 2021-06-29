@@ -180,7 +180,7 @@ class Object{
 public:
     Point3D reference_point;
     vector<Point3D> triangle_end_points;
-    vector<double> gen_obj_coefficients_array;
+    vector<double> gen_obj_coefficients;
 
     double height, width, length;
     vector<double> color;
@@ -443,7 +443,7 @@ class GeneralObject : public Object{
 public:
     GeneralObject()
     {
-        gen_obj_coefficients_array.resize(10);
+        gen_obj_coefficients.resize(10);
     }
     
     void draw()
@@ -451,32 +451,109 @@ public:
         
     }
     
-//    double intersect(Ray ray, vector<double> &changed_color, int level)
-//    {
-//        double t = get_intersection_point_t_value(ray);
-//
-//        if(t <= 0 ) return -1.0;
-//
-//        //near and far plane check needed??
-//
-//        if(level == 0) return t;
-//
-//        for (int i = 0; i < 3; i++)
-//        {
-//            changed_color[i] = color[i] * reflection_coefficients[0];
-//        }
-//        return t;
-//    }
+    bool is_within_cube(Point3D const &intersection_point)
+    {
+        bool is_within = true;
+        if(length != 0)
+        {
+            if(intersection_point.x < reference_point.x || intersection_point.x > reference_point.x + length)
+            {
+                is_within = false;
+            }
+        }
+        
+        if(width != 0)
+        {
+            if(intersection_point.y < reference_point.y || intersection_point.y > reference_point.y + width)
+            {
+                is_within = false;
+            }
+        }
+        
+        if(height != 0)
+        {
+            if(intersection_point.z < reference_point.z || intersection_point.z > reference_point.z + height)
+            {
+                is_within = false;
+            }
+        }
+        return is_within;
+    }
+    
+    double get_intersection_point_t_value(Ray ray)
+    {
+        double a = gen_obj_coefficients[0] * ray.direction.x * ray.direction.x + gen_obj_coefficients[1] * ray.direction.y * ray.direction.y + gen_obj_coefficients[2] * ray.direction.z * ray.direction.z + gen_obj_coefficients[3] * ray.direction.x * ray.direction.y + gen_obj_coefficients[4] * ray.direction.y * ray.direction.z + gen_obj_coefficients[5] * ray.direction.x * ray.direction.z;
+        
+        double b = 2 * gen_obj_coefficients[0] * ray.start.x * ray.direction.x + 2 * gen_obj_coefficients[1] * ray.start.y * ray.direction.y + 2 * gen_obj_coefficients[2] * ray.start.z * ray.direction.z + gen_obj_coefficients[3] * ray.start.x * ray.direction.y + gen_obj_coefficients[3] * ray.start.y * ray.direction.x + gen_obj_coefficients[4] * ray.start.y * ray.direction.z + gen_obj_coefficients[4] * ray.start.z * ray.direction.y + gen_obj_coefficients[5] * ray.start.x * ray.direction.z + gen_obj_coefficients[5] * ray.start.z * ray.direction.x + gen_obj_coefficients[6] * ray.direction.x + gen_obj_coefficients[7] * ray.direction.y + gen_obj_coefficients[8] * ray.direction.z;
+        
+        double c = gen_obj_coefficients[0] * ray.start.x * ray.start.x + gen_obj_coefficients[1] * ray.start.y * ray.start.y + gen_obj_coefficients[2] * ray.start.z * ray.start.z + gen_obj_coefficients[3] * ray.start.x * ray.start.y + gen_obj_coefficients[4] * ray.start.y * ray.start.z + gen_obj_coefficients[5] * ray.start.x * ray.start.z + gen_obj_coefficients[6] * ray.start.x + gen_obj_coefficients[7] * ray.start.y + gen_obj_coefficients[8] * ray.start.z + gen_obj_coefficients[9];
+        
+        //double t = -1.0;
+        
+        double D = b * b - 4 * a * c;
+        if(D < 0) return -1.0;
+        
+        double t_min = (-b - sqrt(D)) / (2 * a);
+        double t_max = (-b + sqrt(D)) / (2 * a);
+        
+        Point3D intersection_point_1 = Point3D(ray.start + t_min * ray.direction);
+        Point3D intersection_point_2 = Point3D(ray.start + t_max * ray.direction);
+        
+        if(is_within_cube(intersection_point_1))
+        {
+            return t_min;
+        }
+        else if(is_within_cube(intersection_point_2))
+        {
+            return t_max;
+        }
+        else return -1;
+    }
+    
+    double intersect(Ray ray, vector<double> &changed_color, int level)
+    {
+        double t = get_intersection_point_t_value(ray);
+
+        if(t <= 0 ) return -1.0;
+
+        //near and far plane check needed??
+
+        if(level == 0) return t;
+
+        for (int i = 0; i < 3; i++)
+        {
+            changed_color[i] = color[i] * reflection_coefficients[0];
+        }
+        return t;
+    }
 
     void print_object()
     {
         cout << "General Object Info:" << endl;
+        
         cout << "General Object 10 CoEfficients: " << endl;
         for(int i = 0; i < 10; i++)
         {
-            cout << char(65 + i) << ": " << gen_obj_coefficients_array[i] << " ";
+            cout << char(65 + i) << ": " << gen_obj_coefficients[i] << " ";
         }
         cout << endl;
+        
+        cout << "General Object Equation: ";
+        string eq = "";
+        vector<string> vec = {"x^2", "y^2", "z^2", "xy", "yz", "zx", "x", "y", "z", " = 0"};
+        for(int i = 0; i < 9; i++)
+        {
+            eq += to_string(gen_obj_coefficients[i]);
+            eq += vec[i];
+            if(gen_obj_coefficients[i+1] >= 0) eq += "+";
+            else eq += "";
+            if(i == 8)
+            {
+                eq += to_string(gen_obj_coefficients[i+1]);
+                eq += vec[i+1];
+            }
+        }
+        cout << eq <<endl;
 
         cout << "Cube Reference Point: ";
         reference_point.printPoint();
@@ -502,7 +579,7 @@ public:
 
     ~GeneralObject()
     {
-        gen_obj_coefficients_array.clear();
+        gen_obj_coefficients.clear();
     }
 };
 

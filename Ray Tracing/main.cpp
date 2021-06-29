@@ -499,7 +499,7 @@ void load_data()
 
             for(int i = 0; i < 10; i++)
             {
-                cin >> object->gen_obj_coefficients_array[i];
+                cin >> object->gen_obj_coefficients[i];
             }
 
             Point3D cube_reference_point;
@@ -518,7 +518,7 @@ void load_data()
         object->set_reflection_coefficients(amb, dif, spec, rec_ref);
         object->set_shininess(shininess);
 
-        //object->print_object();
+        object->print_object();
 
         objects.push_back(object);
     }
