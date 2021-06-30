@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <vector>
+#include <limits>
 
 #ifdef __APPLE__
 
@@ -24,6 +25,8 @@
 #endif
 
 #define epsilon 0.0000001
+#define Z_NEAR_DISTANCE 1
+#define Z_FAR_DISTANCE 1000
 
 using namespace std;
 
@@ -217,9 +220,8 @@ public:
 
     Point3D get_reflection_vector(Point3D const &incident_vector, Point3D const &normal)
     {
-        //r = a - 2 * (a . n) * n.   here, a = incident, n = normal
-        Point3D reflection = 2 * vector_dot_product(incident_vector, normal) * normal - incident_vector;
-        reflection.normalize_point();
+        //r = a - 2 * (a . n) * n.   here, a = incident ray, n = normal, r = reflected ray
+        Point3D reflection = incident_vector - 2 * vector_dot_product(incident_vector, normal) * normal;
         
         return reflection;
     }
@@ -259,15 +261,18 @@ public:
 
 vector<Object*> objects;
 vector<Light> lights;
+int level_of_recursion;
 
-void coloring_illumination(Object *object, Ray ray, double t, vector<double> &changed_color, int level)
+void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<double> &changed_color, int level)
 {
     //intersection point equation --> (ro + t * rd)
     Point3D intersection_point = ray.start + t * ray.direction;
     Point3D normal = object->get_normal_vector(intersection_point);
     Point3D reflection = object->get_reflection_vector(ray.direction, normal);
     
-    //set ambient color
+    /* ********************************* ILLUMINATION START ********************************* */
+    
+    // set ambient color
     for(int i = 0; i < 3; i++)
     {
         changed_color[i] = object->color[i] * object->reflection_coefficients[0];
@@ -277,15 +282,14 @@ void coloring_illumination(Object *object, Ray ray, double t, vector<double> &ch
     {
         /* Construct L ray like in the picture. direction = (lightSource - intersectionPoint) then normalize it */
         Point3D light_ray_direction = lights[i].source_light_position - intersection_point;
-        //lights[i].print_light_info();
         
         light_ray_direction.normalize_point();
         
-        Point3D light_ray_start = intersection_point + light_ray_direction * 0.0001;//1 is for taking slightly above the point so it doesn’t again intersect with same object due to precision
+        Point3D light_ray_start = intersection_point + light_ray_direction * 1.0;// 1 is for taking slightly above the point so it doesn’t again intersect with same object due to precision
         
         Ray light_ray(light_ray_start, light_ray_direction);
         
-        //For each object now check whether this L ray obscured by any object or not.
+        // For each object now check whether this L ray obscured by any object or not.
         bool is_obscured = false;
         
         for(int j = 0; j < objects.size(); j++)
@@ -318,6 +322,48 @@ void coloring_illumination(Object *object, Ray ray, double t, vector<double> &ch
             }
         }
     }
+    /* ********************************* ILLUMINATION END ********************************* */
+    
+    /* ********************************* REFLECTION START ********************************* */
+    
+    if(level < level_of_recursion)
+    {
+        Point3D reflection_ray_start = intersection_point + reflection * 1.0; //slight up to avoid own intersection
+        
+        Ray reflection_ray(reflection_ray_start, reflection);
+        
+        int nearest_reflection = -1;
+        double t_reflection;
+        double t_min_reflection = numeric_limits<double>::max();
+        vector<double> reflection_color(3);
+        
+        for(int k = 0; k < objects.size(); k++)
+        {
+            t_reflection = objects[k]->intersect(reflection_ray, reflection_color, 0);
+            
+            if(t_reflection < t_min_reflection && t_reflection > 0)
+            {
+                t_min_reflection = t_reflection;
+                nearest_reflection = k;
+            }
+        }
+        
+        if(nearest_reflection != -1)
+        {
+            t_min_reflection = objects[nearest_reflection]->intersect(reflection_ray, reflection_color, level + 1);
+            
+            if(t_min_reflection > 0)
+            {
+                for(int k = 0; k < 3; k++)
+                {
+                    changed_color[k] += reflection_color[k] * object->reflection_coefficients[3];
+                }
+            }
+        }
+        reflection_color.clear();
+    }
+    
+    /* ********************************* REFLECTION END ********************************* */
 }
 
 class Sphere : public Object{
@@ -342,7 +388,7 @@ public:
     {
         Point3D normal = intersection_point - reference_point;
         normal.normalize_point();
-        //cout << "sphere normal" <<endl;
+
         return normal;
     }
     
@@ -356,7 +402,6 @@ public:
         double tp = vector_dot_product((-1) * Ro, ray.direction);
         double d_square = vector_dot_product(Ro, Ro) - tp * tp;
         double r_square = radius * radius;
-        
 
         if(tp < 0 || d_square > r_square) return -1.0; //tp < 0 ---> object is beside the eye.  d^2 > r^2 --->ray is going away from circle
 
@@ -379,13 +424,14 @@ public:
     {
         double t = get_intersection_point_t_value(ray);
         
-        if(t <= 0 ) return -1.0;
+        if(t <= 0) return -1.0;
 
-        //near and far plane check needed??
+        //between near and far plane check
+        if(t < Z_NEAR_DISTANCE || t > Z_FAR_DISTANCE) return -1.0;
 
         if(level == 0) return t; //When level is 0, the purpose of the method is to determine the nearest object only.
 
-        coloring_illumination(this, ray, t, changed_color, level);
+        coloring_illumination_reflection(this, ray, t, changed_color, level);
         
         return t;
     }
@@ -437,7 +483,7 @@ public:
         Point3D edge2 = triangle_end_points[2] - triangle_end_points[0];
         Point3D normal = vector_cross_product(edge1, edge2);
         normal.normalize_point();
-        //cout << "triangle normal" <<endl;
+        
         return normal;
     }
     
@@ -474,11 +520,12 @@ public:
         double t = get_intersection_point_t_value(ray);
         if(t <= 0 ) return -1.0;
         
-        //near and far plane check needed??
+        // between near and far plane check
+        if(t < Z_NEAR_DISTANCE || t > Z_FAR_DISTANCE) return -1.0;
         
         if(level == 0) return t; //When level is 0, the purpose of the method is to determine the nearest object only.
         
-        coloring_illumination(this, ray, t, changed_color, level);
+        coloring_illumination_reflection(this, ray, t, changed_color, level);
         return t;
     }
     
@@ -620,11 +667,13 @@ public:
 
         if(t <= 0 ) return -1.0;
 
-        //near and far plane check needed??
+        // between near and far plane check
+        if(t < Z_NEAR_DISTANCE || t > Z_FAR_DISTANCE) return -1.0;
 
         if(level == 0) return t; //When level is 0, the purpose of the method is to determine the nearest object only.
 
-        coloring_illumination(this, ray, t, changed_color, level);
+        coloring_illumination_reflection(this, ray, t, changed_color, level);
+        
         return t;
     }
 
@@ -735,7 +784,8 @@ public:
         
         if(!is_within_boundary(intersecting_vector)) return -1.0;
         
-        //near and far plane check needed??
+        // between near and far plane check
+        if(t < Z_NEAR_DISTANCE || t > Z_FAR_DISTANCE) return -1.0;
 
         if(level == 0) return t; //When level is 0, the purpose of the  method is to determine the nearest object only.
         
@@ -750,7 +800,7 @@ public:
             color[i] = (tile_x_index + tile_y_index + 1) % 2;
         }
         
-        coloring_illumination(this, ray, t, changed_color, level);
+        coloring_illumination_reflection(this, ray, t, changed_color, level);
         
         return t;
     }

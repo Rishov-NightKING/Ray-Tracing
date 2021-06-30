@@ -4,7 +4,7 @@
 //
 //  Created by Rishov Paul on 26/6/21.
 //
-#include <limits>
+
 #include "1605084_classes.h"
 #include "bitmap_image.hpp"
 
@@ -13,8 +13,6 @@
 
 #define FOVY 80
 #define ASPECT_RATIO 1
-#define Z_NEAR_DISTANCE 1
-#define Z_FAR_DISTANCE 1000
 
 #define pi (2*acos(0.0))
 #define MOVE_CONSTANT 2.0
@@ -34,7 +32,7 @@ double angle;
 
 
 //global variables
-int level_of_recursion;
+extern int level_of_recursion;
 int image_height, image_width;
 int num_of_objects;
 int num_of_light_sources;
@@ -171,6 +169,7 @@ void capture()
             
             //update image pixel (i,j)
             image.set_pixel(j, i, dummy_color[0] * 255, dummy_color[1] * 255, dummy_color[2] * 255);
+            dummy_color.clear();
         }
     }
     image.save_image("1605084_ray_tracing.bmp");
