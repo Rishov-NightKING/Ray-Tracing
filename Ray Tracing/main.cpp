@@ -39,8 +39,8 @@ int image_height, image_width;
 int num_of_objects;
 int num_of_light_sources;
 
-vector<Object*> objects;
-vector<Light> lights;
+extern vector<Object*> objects;
+extern vector<Light> lights;
 
 
 using namespace std;
@@ -74,50 +74,37 @@ void drawAxes()
 void look_left(double angle)
 {
     //up fixed
-    Point3D temp = look ;
-    look = temp * cos((double)angle) + vector_cross_product(up, temp) * sin((double)angle);
-
-    temp = rght;
-    rght = temp * cos((double)angle) + vector_cross_product(up, temp) * sin((double)angle);
+    look = look * cos((double)angle) + vector_cross_product(up, look) * sin((double)angle);
+    rght = rght * cos((double)angle) + vector_cross_product(up, rght) * sin((double)angle);
 }
 
 void look_right(double angle)
 {
-    angle = (-1) * angle;
-    look_left(angle);
+    look_left(-angle);
 }
 
 void look_up(double angle)
 {
     //right fixed
-    Point3D temp = up ;
-    up = temp * cos((double)angle) + vector_cross_product(rght, temp) * sin((double)angle);
-
-    temp = look ;
-    look = temp * cos((double)angle) + vector_cross_product(rght, temp) * sin((double)angle);
+    up = up * cos((double)angle) + vector_cross_product(rght, up) * sin((double)angle);
+    look = look * cos((double)angle) + vector_cross_product(rght, look) * sin((double)angle);
 }
 
 void look_down(double angle)
 {
-    angle = (-1)*angle;
-    look_up(angle);
-}
-
-void tilt_clockwise(double angle)
-{
-    //look fixed
-    angle = (-1)*angle;
-    Point3D temp = up ;
-    up = temp * cos((double)angle) + vector_cross_product(look, temp) * sin((double)angle);
-
-    temp = rght ;
-    rght = temp * cos((double)angle) + vector_cross_product(look, temp) * sin((double)angle);
+    look_up(-angle);
 }
 
 void tilt_anticlockwise(double angle)
 {
-    angle = (-1)*angle;
-    tilt_clockwise(angle);
+    //look fixed
+    up = up * cos((double)angle) + vector_cross_product(look, up) * sin((double)angle);
+    rght = rght * cos((double)angle) + vector_cross_product(look, rght) * sin((double)angle);
+}
+
+void tilt_clockwise(double angle)
+{
+    tilt_anticlockwise(-angle);
 }
 
 double degreeToRadianAngle(double degree)
@@ -173,6 +160,13 @@ void capture()
             if(nearest != -1)
             {
                 t_min = objects[nearest]->intersect(ray, dummy_color, 1);
+            }
+            
+            //Clip the color values so that they are in [0, 1] range.
+            for(int x = 0; x < 3; x++)
+            {
+                if(dummy_color[x] < 0.0) dummy_color[x] = 0.0;
+                else if(dummy_color[x] > 1.0) dummy_color[x] = 1.0;
             }
             
             //update image pixel (i,j)
@@ -300,7 +294,7 @@ void display(){
     drawAxes();
     
     //draw Light Sources
-    if(lights.size() == 0) return;
+    //if(lights.size() == 0) return;
     for(int i = 0; i < lights.size(); i++)
     {
         lights[i].draw_light_source();
@@ -447,7 +441,7 @@ void load_data()
         Point3D source = Point3D(light_x, light_y, light_z);
         Light light = Light(source);
         light.set_color(R, G, B);
-        
+        //light.print_light_info();
         lights.push_back(light);
     }
     

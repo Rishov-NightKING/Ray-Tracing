@@ -51,8 +51,6 @@
 		A7126D8826877028008DA7EE = {
 			isa = PBXGroup;
 			children = (
-				A7574600268776E000005F6F /* bitmap_image.hpp */,
-				A75745FE268776AE00005F6F /* 1605084_classes.h */,
 				A736FBDC2688E900008BFB5B /* scene.txt */,
 				A7126D9326877028008DA7EE /* Ray Tracing */,
 				A7126D9226877028008DA7EE /* Products */,
@@ -72,6 +70,8 @@
 			isa = PBXGroup;
 			children = (
 				A7126D9426877028008DA7EE /* main.cpp */,
+				A7574600268776E000005F6F /* bitmap_image.hpp */,
+				A75745FE268776AE00005F6F /* 1605084_classes.h */,
 			);
 			path = "Ray Tracing";
 			sourceTree = SOURCE_ROOT;

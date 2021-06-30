@@ -15,6 +15,7 @@
 
 #include <GLUT/glut.h>
 #define GL_SILENCE_DEPRECATION
+
 #else
 
 #include <windows.h>
@@ -90,7 +91,7 @@ inline Point3D operator*(T constant, Point3D const &rhs) {
 
 double vector_dot_product(Point3D const &a, Point3D const &b)
 {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
+    return (a.x * b.x + a.y * b.y + a.z * b.z);
 }
 
 Point3D vector_cross_product(Point3D const &a, Point3D const &b)
@@ -214,12 +215,22 @@ public:
         this->reflection_coefficients[3] = rec_ref;
     }
 
+    Point3D get_reflection_vector(Point3D const &incident_vector, Point3D const &normal)
+    {
+        //r = a - 2 * (a . n) * n.   here, a = incident, n = normal
+        Point3D reflection = 2 * vector_dot_product(incident_vector, normal) * normal - incident_vector;
+        reflection.normalize_point();
+        
+        return reflection;
+    }
+    
     virtual void draw(){}
     
     virtual Point3D get_normal_vector(Point3D const &intersection_point)
     {
         return Point3D();//origin
     }
+    
     
     virtual double get_intersection_point_t_value(Ray ray)
     {
@@ -246,6 +257,69 @@ public:
     }
 };
 
+vector<Object*> objects;
+vector<Light> lights;
+
+void coloring_illumination(Object *object, Ray ray, double t, vector<double> &changed_color, int level)
+{
+    //intersection point equation --> (ro + t * rd)
+    Point3D intersection_point = ray.start + t * ray.direction;
+    Point3D normal = object->get_normal_vector(intersection_point);
+    Point3D reflection = object->get_reflection_vector(ray.direction, normal);
+    
+    //set ambient color
+    for(int i = 0; i < 3; i++)
+    {
+        changed_color[i] = object->color[i] * object->reflection_coefficients[0];
+    }
+    
+    for(int i = 0; i < lights.size(); i++)
+    {
+        /* Construct L ray like in the picture. direction = (lightSource - intersectionPoint) then normalize it */
+        Point3D light_ray_direction = lights[i].source_light_position - intersection_point;
+        //lights[i].print_light_info();
+        
+        light_ray_direction.normalize_point();
+        
+        Point3D light_ray_start = intersection_point + light_ray_direction * 0.0001;//1 is for taking slightly above the point so it doesn’t again intersect with same object due to precision
+        
+        Ray light_ray(light_ray_start, light_ray_direction);
+        
+        //For each object now check whether this L ray obscured by any object or not.
+        bool is_obscured = false;
+        
+        for(int j = 0; j < objects.size(); j++)
+        {
+            double t_value = objects[i]->get_intersection_point_t_value(light_ray);
+            if(t_value > 0)
+            {
+                is_obscured = true;
+                break;
+            }
+        }
+        
+        // If it is not obscured that means light falls onto the intersection point, I have to update current_color
+        if(!is_obscured)
+        {
+            // calculate lambert diffuse value
+            double L_dot_N = vector_dot_product(light_ray.direction, normal); //(L_dot_N)=> L = light source incident ray
+            L_dot_N = max(0.0, L_dot_N); //when theta is negative
+            double phong_diffuse = object->reflection_coefficients[1] * L_dot_N;
+            
+            // calculate phong specular value
+            double R_dot_V = vector_dot_product(reflection, ray.direction); //(R_dot_V)=>V = eye ray direction
+            R_dot_V = max(0.0, R_dot_V);
+            double phong_specular = object->reflection_coefficients[2] * pow(R_dot_V, object->shininess); // I_spec = K_spec * (R . V)^shininess
+            
+            //set diffuse and specular color
+            for(int j = 0; j < 3; j++)
+            {
+                changed_color[j] += lights[i].color[j] * (phong_diffuse + phong_specular) * object->color[j];
+            }
+        }
+    }
+}
+
 class Sphere : public Object{
 
 public:
@@ -255,7 +329,7 @@ public:
         this->height = this->width = this->length = radius;
     }
 
-    void draw()
+    void draw() override
     {
         glPushMatrix();
         glTranslatef(reference_point.x, reference_point.y, reference_point.z);
@@ -266,16 +340,16 @@ public:
     
     Point3D get_normal_vector(Point3D const &intersection_point) override
     {
-        Point3D normal(intersection_point - reference_point);
+        Point3D normal = intersection_point - reference_point;
         normal.normalize_point();
-        
+        //cout << "sphere normal" <<endl;
         return normal;
     }
     
     double get_intersection_point_t_value(Ray ray) override
     {
         //Geometric Ray-Sphere Intersection
-        Point3D Ro = Point3D(ray.start - reference_point); // ro = ro - center(stored in reference point)
+        Point3D Ro = ray.start - reference_point; // ro = ro - center(stored in reference point)
         double radius = height;
 
         double Ro_dot_Ro = vector_dot_product(Ro, Ro);
@@ -304,17 +378,15 @@ public:
     double intersect(Ray ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
-
+        
         if(t <= 0 ) return -1.0;
 
         //near and far plane check needed??
 
-        if(level == 0) return t;
+        if(level == 0) return t; //When level is 0, the purpose of the method is to determine the nearest object only.
 
-        for (int i = 0; i < 3; i++)
-        {
-            changed_color[i] = color[i] * reflection_coefficients[0];
-        }
+        coloring_illumination(this, ray, t, changed_color, level);
+        
         return t;
     }
 
@@ -365,7 +437,7 @@ public:
         Point3D edge2 = triangle_end_points[2] - triangle_end_points[0];
         Point3D normal = vector_cross_product(edge1, edge2);
         normal.normalize_point();
-        
+        //cout << "triangle normal" <<endl;
         return normal;
     }
     
@@ -404,12 +476,9 @@ public:
         
         //near and far plane check needed??
         
-        if(level == 0) return t;
+        if(level == 0) return t; //When level is 0, the purpose of the method is to determine the nearest object only.
         
-        for (int i = 0; i < 3; i++)
-        {
-            changed_color[i] = color[i] * reflection_coefficients[0];
-        }
+        coloring_illumination(this, ray, t, changed_color, level);
         return t;
     }
     
@@ -531,8 +600,8 @@ public:
         double t_min = (-b - sqrt(D)) / (2 * a);
         double t_max = (-b + sqrt(D)) / (2 * a);
         
-        Point3D intersection_point_1 = Point3D(ray.start + t_min * ray.direction);
-        Point3D intersection_point_2 = Point3D(ray.start + t_max * ray.direction);
+        Point3D intersection_point_1 = ray.start + t_min * ray.direction;
+        Point3D intersection_point_2 = ray.start + t_max * ray.direction;
         
         if(is_within_cube(intersection_point_1))
         {
@@ -553,12 +622,9 @@ public:
 
         //near and far plane check needed??
 
-        if(level == 0) return t;
+        if(level == 0) return t; //When level is 0, the purpose of the method is to determine the nearest object only.
 
-        for (int i = 0; i < 3; i++)
-        {
-            changed_color[i] = color[i] * reflection_coefficients[0];
-        }
+        coloring_illumination(this, ray, t, changed_color, level);
         return t;
     }
 
@@ -630,7 +696,7 @@ public:
     
     Point3D get_normal_vector(Point3D const &intersection_point) override
     {
-        return Point3D(0, 0, 1); //In XY plane normal is Z axis
+        return Point3D(0.0, 0.0, 1.0); //In XY plane normal is Z axis
     }
     
     bool is_within_boundary(Point3D const &point)
@@ -671,7 +737,7 @@ public:
         
         //near and far plane check needed??
 
-        if(level == 0) return t;
+        if(level == 0) return t; //When level is 0, the purpose of the  method is to determine the nearest object only.
         
         int tile_pixel_x = intersecting_vector.x - reference_point.x;
         int tile_pixel_y = intersecting_vector.y - reference_point.y;
@@ -681,8 +747,11 @@ public:
         
         for (int i = 0; i < 3; i++)
         {
-            changed_color[i] = (tile_x_index + tile_y_index + 1) % 2;
+            color[i] = (tile_x_index + tile_y_index + 1) % 2;
         }
+        
+        coloring_illumination(this, ray, t, changed_color, level);
+        
         return t;
     }
 
