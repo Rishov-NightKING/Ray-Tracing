@@ -15,7 +15,7 @@
 #define ASPECT_RATIO 1
 
 #define pi (2*acos(0.0))
-#define MOVE_CONSTANT 2.0
+#define MOVE_CONSTANT 3.0
 #define ROTATION_CONSTANT 0.25
 
 /* ****************** global variables ******************** */
@@ -265,8 +265,7 @@ void display(){
     glClearColor(0, 0, 0, 0);    //color black
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    /********************
-        / set-up camera here ********************/
+    /* ******************* setup camera here ******************* */
     //load the correct matrix -- MODEL-VIEW matrix
     glMatrixMode(GL_MODELVIEW);
 
@@ -284,16 +283,9 @@ void display(){
     //again select MODEL-VIEW
     glMatrixMode(GL_MODELVIEW);
 
-
-        /****************************
-        / Add your objects from here
-        ****************************/
-        //add objects
-
     drawAxes();
     
     //draw Light Sources
-    //if(lights.size() == 0) return;
     for(int i = 0; i < lights.size(); i++)
     {
         lights[i].draw_light_source();
@@ -424,8 +416,6 @@ void load_data()
         object->set_reflection_coefficients(amb, dif, spec, rec_ref);
         object->set_shininess(shininess);
 
-        //object->print_object();
-
         objects.push_back(object);
     }
     
@@ -440,17 +430,14 @@ void load_data()
         Point3D source = Point3D(light_x, light_y, light_z);
         Light light = Light(source);
         light.set_color(R, G, B);
-        //light.print_light_info();
         lights.push_back(light);
     }
     
     //Floor Push at last
     object = new Floor(1000, 20);
-    object->set_reflection_coefficients(0.5, 0.3, 0.3, 0.3);
+    object->set_reflection_coefficients(0.5, 0.2, 0.3, 0.4);
     object->set_shininess(5);
     objects.push_back(object);
-    
-    //objects[objects.size() - 1]->print_object();
 }
 
 
@@ -481,7 +468,8 @@ int main(int argc, char **argv) {
     glutSpecialFunc(specialKeyListener);
     glutMouseFunc(mouseListener);
 
-    glutMainLoop();        //The main loop of OpenGL
+    //The main loop of OpenGL
+    glutMainLoop();
 
     /* ****************** Free Memory **************************** */
     lights.clear();

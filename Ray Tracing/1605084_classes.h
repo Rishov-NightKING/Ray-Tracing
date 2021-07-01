@@ -222,7 +222,7 @@ public:
     {
         //r = a - 2 * (a . n) * n.   here, a = incident ray, n = normal, r = reflected ray
         Point3D reflection = incident_vector - 2 * vector_dot_product(incident_vector, normal) * normal;
-        
+        reflection.normalize_point();
         return reflection;
     }
     
@@ -282,10 +282,9 @@ void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<
     {
         /* Construct L ray like in the picture. direction = (lightSource - intersectionPoint) then normalize it */
         Point3D light_ray_direction = lights[i].source_light_position - intersection_point;
-        
         light_ray_direction.normalize_point();
         
-        Point3D light_ray_start = intersection_point + light_ray_direction * 1.0;// 1 is for taking slightly above the point so it doesn’t again intersect with same object due to precision
+        Point3D light_ray_start = intersection_point +  0.001 * light_ray_direction;// 0.001 is for taking slightly above the point so it doesn’t again intersect with same object due to precision
         
         Ray light_ray(light_ray_start, light_ray_direction);
         
@@ -294,8 +293,8 @@ void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<
         
         for(int j = 0; j < objects.size(); j++)
         {
-            double t_value = objects[i]->get_intersection_point_t_value(light_ray);
-            if(t_value > 0)
+            double t_value = objects[j]->get_intersection_point_t_value(light_ray);
+            if(t_value > 0.0)
             {
                 is_obscured = true;
                 break;
@@ -315,7 +314,7 @@ void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<
             R_dot_V = max(0.0, R_dot_V);
             double phong_specular = object->reflection_coefficients[2] * pow(R_dot_V, object->shininess); // I_spec = K_spec * (R . V)^shininess
             
-            //set diffuse and specular color
+            //set diffuse and specular color. Formula from schaums's outline book
             for(int j = 0; j < 3; j++)
             {
                 changed_color[j] += lights[i].color[j] * (phong_diffuse + phong_specular) * object->color[j];
@@ -328,10 +327,11 @@ void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<
     
     if(level < level_of_recursion)
     {
-        Point3D reflection_ray_start = intersection_point + reflection * 1.0; //slight up to avoid own intersection
+        Point3D reflection_ray_start = intersection_point + 0.001 * reflection; //slight up to avoid own intersection
         
         Ray reflection_ray(reflection_ray_start, reflection);
         
+        // Like capture method, find the nearest intersecting object, using intersect function
         int nearest_reflection = -1;
         double t_reflection;
         double t_min_reflection = numeric_limits<double>::max();
@@ -352,12 +352,9 @@ void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<
         {
             t_min_reflection = objects[nearest_reflection]->intersect(reflection_ray, reflection_color, level + 1);
             
-            if(t_min_reflection > 0)
+            for(int k = 0; k < 3; k++)
             {
-                for(int k = 0; k < 3; k++)
-                {
-                    changed_color[k] += reflection_color[k] * object->reflection_coefficients[3];
-                }
+                changed_color[k] += reflection_color[k] * object->reflection_coefficients[3];
             }
         }
         reflection_color.clear();
@@ -403,7 +400,7 @@ public:
         double d_square = vector_dot_product(Ro, Ro) - tp * tp;
         double r_square = radius * radius;
 
-        if(tp < 0 || d_square > r_square) return -1.0; //tp < 0 ---> object is beside the eye.  d^2 > r^2 --->ray is going away from circle
+        if(tp <= 0 || d_square > r_square) return -1.0; //tp < 0 ---> object is beside the eye.  d^2 > r^2 --->ray is going away from circle
 
         double t_prime = sqrt(r_square - d_square); // d^2 <= r^2
         double t = -1.0;
@@ -416,6 +413,23 @@ public:
         {
             t = tp - t_prime;
         }
+        
+        /* Normal Procedure
+        double a = 1.0;
+        double b = 2 * vector_dot_product(ray.direction, ray.start - reference_point);
+        double c = vector_dot_product(ray.start - reference_point, ray.start - reference_point) - height * height;
+        
+        double d = (b * b) - (4 * a * c);
+        
+        if(d < 0) return -1.0;
+        
+        d = sqrt(d);
+        double t1 = (- b - d) / (2 * a);
+        double t2 = (- b + d) / (2 * a);
+        
+        if(t1 > 0.0 && t2 > 0.0) return min(t1, t2);
+        else if(t1 < 0.0 && t2 > 0.0) return t2;
+        else return -1.0;*/
         
         return t;
     }
