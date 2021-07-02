@@ -14,15 +14,15 @@
 #define FOVY 80
 #define ASPECT_RATIO 1
 
-#define pi (2*acos(0.0))
+#define pi (2 * acos(0.0))
 #define MOVE_CONSTANT 3.0
 #define ROTATION_CONSTANT 0.25
 
 /* ****************** global variables ******************** */
 
-//u -- up vector
-//r -- right vector
-//l - look vector
+//up -- up vector
+//rght -- right vector
+//look -- look vector
 Point3D eye_pos, up, rght, look;
 
 double cameraHeight;
@@ -72,8 +72,8 @@ void drawAxes()
 void look_left(double angle)
 {
     //up fixed
-    look = look * cos((double)angle) + vector_cross_product(up, look) * sin((double)angle);
-    rght = rght * cos((double)angle) + vector_cross_product(up, rght) * sin((double)angle);
+    look = look * cos(angle) + vector_cross_product(up, look) * sin(angle);
+    rght = rght * cos(angle) + vector_cross_product(up, rght) * sin(angle);
 }
 
 void look_right(double angle)
@@ -84,8 +84,8 @@ void look_right(double angle)
 void look_up(double angle)
 {
     //right fixed
-    up = up * cos((double)angle) + vector_cross_product(rght, up) * sin((double)angle);
-    look = look * cos((double)angle) + vector_cross_product(rght, look) * sin((double)angle);
+    up = up * cos(angle) + vector_cross_product(rght, up) * sin(angle);
+    look = look * cos(angle) + vector_cross_product(rght, look) * sin(angle);
 }
 
 void look_down(double angle)
@@ -96,8 +96,8 @@ void look_down(double angle)
 void tilt_anticlockwise(double angle)
 {
     //look fixed
-    up = up * cos((double)angle) + vector_cross_product(look, up) * sin((double)angle);
-    rght = rght * cos((double)angle) + vector_cross_product(look, rght) * sin((double)angle);
+    up = up * cos(angle) + vector_cross_product(look, up) * sin(angle);
+    rght = rght * cos(angle) + vector_cross_product(look, rght) * sin(angle);
 }
 
 void tilt_clockwise(double angle)
@@ -114,6 +114,7 @@ void capture()
 {
     //initialize bitmap image and set background color to black
     bitmap_image image(image_width, image_height); //col x row
+    
     for(int i = 0; i < image_height; i++)
     {
         for(int j = 0; j < image_width; j++)
@@ -176,36 +177,47 @@ void capture()
     image.clear();
 }
 
-void keyboardListener(unsigned char key, int x,int y){
-    switch(key){
+void keyboardListener(unsigned char key, int x,int y)
+{
+    switch(key)
+    {
         case '0':
             capture();
             break;
+            
         case '1':
             look_left(pi / 18 * ROTATION_CONSTANT);
             break;
+            
         case '2':
             look_right(pi / 18 * ROTATION_CONSTANT);
             break;
+            
         case '3':
             look_up(pi / 18 * ROTATION_CONSTANT);
             break;
+            
         case '4':
             look_down(pi / 18 * ROTATION_CONSTANT);
             break;
+            
         case '5':
             tilt_clockwise(pi / 18 * ROTATION_CONSTANT);
             break;
+            
         case '6':
             tilt_anticlockwise(pi / 18 * ROTATION_CONSTANT);
             break;
+            
         default:
             break;
     }
 }
 
-void specialKeyListener(int key, int x, int y){
-    switch(key){
+void specialKeyListener(int key, int x, int y)
+{
+    switch(key)
+    {
         case GLUT_KEY_DOWN:        //down arrow key
             cameraHeight -= 3.0;
             eye_pos = eye_pos - look * MOVE_CONSTANT;
@@ -215,7 +227,7 @@ void specialKeyListener(int key, int x, int y){
             cameraHeight += 3.0;
             eye_pos = eye_pos + look * MOVE_CONSTANT;
             break;
-
+            
         case GLUT_KEY_RIGHT:
             eye_pos = eye_pos + rght * MOVE_CONSTANT;
             break;
@@ -223,7 +235,7 @@ void specialKeyListener(int key, int x, int y){
         case GLUT_KEY_LEFT:
             eye_pos = eye_pos - rght * MOVE_CONSTANT;
             break;
-
+            
         case GLUT_KEY_PAGE_UP:
             eye_pos = eye_pos + up * MOVE_CONSTANT;
             break;
@@ -231,6 +243,7 @@ void specialKeyListener(int key, int x, int y){
         case GLUT_KEY_PAGE_DOWN:
             eye_pos = eye_pos - up * MOVE_CONSTANT;
             break;
+            
         default:
             break;
     }
@@ -238,9 +251,11 @@ void specialKeyListener(int key, int x, int y){
 
 void mouseListener(int button, int state, int x, int y)
 {  //x, y is the x-y of the screen(2D)
-    switch(button){
+    switch(button)
+    {
         case GLUT_LEFT_BUTTON:
-            if(state == GLUT_DOWN){        // 2 times?? in ONE click? -- solution is checking DOWN or UP
+            if(state == GLUT_DOWN)
+            {   // 2 times?? in ONE click? -- solution is checking DOWN or UP
                 drawaxes = 1 - drawaxes;
             }
             break;
@@ -258,31 +273,31 @@ void mouseListener(int button, int state, int x, int y)
     }
 }
 
-void display(){
-
+void display()
+{
     //clear the display
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0, 0, 0, 0);    //color black
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    
     /* ******************* setup camera here ******************* */
     //load the correct matrix -- MODEL-VIEW matrix
     glMatrixMode(GL_MODELVIEW);
-
+    
     //initialize the matrix
     glLoadIdentity();
-
+    
     //now give three info
     //1. where is the camera (viewer)?
     //2. where is the camera looking?
     //3. Which direction is the camera's UP direction?
-
-    gluLookAt(eye_pos.x, eye_pos.y, eye_pos.z,     eye_pos.x+look.x, eye_pos.y+look.y, eye_pos.z+look.z,    up.x, up.y, up.z);
-
-
+    
+    gluLookAt(eye_pos.x, eye_pos.y, eye_pos.z,     eye_pos.x + look.x, eye_pos.y + look.y, eye_pos.z + look.z,    up.x, up.y, up.z);
+    
+    
     //again select MODEL-VIEW
     glMatrixMode(GL_MODELVIEW);
-
+    
     drawAxes();
     
     //draw Light Sources
@@ -290,18 +305,19 @@ void display(){
     {
         lights[i].draw_light_source();
     }
-
+    
     //draw Objects
     for(int i = 0; i < objects.size(); i++)
     {
         objects[i]->draw();
     }
-
+    
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
 }
 
-void animate(){
+void animate()
+{
     angle += 0.05;
     //codes for any changes in Models, Camera
     glutPostRedisplay();
@@ -313,7 +329,7 @@ void init()
     drawaxes = 1;
     cameraHeight = 150.0;
     cameraAngle = 1.0;
-    angle = 0;
+    angle = 0.0;
 
     //initialization of pos, u, r, l vectors
     eye_pos.x = eye_pos.y = 120;
@@ -322,12 +338,12 @@ void init()
     up.x = up.y = 0;
     up.z = 1;
 
-    rght.x = (double)-1/sqrt(2);
-    rght.y = (double)1/sqrt(2);
+    rght.x = -1/sqrt(2.0);
+    rght.y = 1/sqrt(2.0);
     rght.z = 0;
 
-    look.x = (double)-1/sqrt(2);
-    look.y = (double)-1/sqrt(2);
+    look.x = -1/sqrt(2.0);
+    look.y = -1/sqrt(2.0);
     look.z = 0;
 
 
@@ -371,6 +387,7 @@ void load_data()
     for(int i = 0; i < num_of_objects; i++)
     {
         cin >> str;
+        
         if(str == "sphere")
         {
             Point3D center;
@@ -407,7 +424,7 @@ void load_data()
             cin >> object->length >> object->width >> object->height;
         }
 
-        //possible refactor by directly inputting to array
+        //possible refactor by directly inputting to array but that seems a little bit ambiguous
         cin >> R >> G >> B;
         cin >> amb >> dif >> spec >> rec_ref;
         cin >> shininess;
@@ -427,27 +444,31 @@ void load_data()
         cin >> light_x >> light_y >> light_z;
         cin >> R >> G >> B;
         
-        Point3D source = Point3D(light_x, light_y, light_z);
-        Light light = Light(source);
+        Point3D source(light_x, light_y, light_z);
+        Light light(source);
+        
         light.set_color(R, G, B);
+        
         lights.push_back(light);
     }
     
-    //Floor Push at last
+    //Push Floor at last
     object = new Floor(1000, 20);
     object->set_reflection_coefficients(0.5, 0.2, 0.3, 0.4);
     object->set_shininess(5);
+    
     objects.push_back(object);
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     /* *************** File Read **********************************/
     
     freopen("scene.txt", "r", stdin);
     load_data();
     
-    //project location ---> cd Documents/Academics/4-1/"Computer Graphics Sessional"/Offline3/"Ray Tracing"
+    /* project location---> cd Documents/Academics/4-1/"Computer Graphics Sessional"/Offline3/"Ray Tracing" */
     
     /* ***********************************************************/
     glutInit(&argc,argv);

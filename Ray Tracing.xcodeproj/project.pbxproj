@@ -30,7 +30,7 @@
 		A7126D9426877028008DA7EE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		A7126D9C2687703F008DA7EE /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		A7126D9E26877057008DA7EE /* GLUT.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLUT.framework; path = System/Library/Frameworks/GLUT.framework; sourceTree = SDKROOT; };
-		A736FBDC2688E900008BFB5B /* scene.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = scene.txt; path = "Ray Tracing/scene.txt"; sourceTree = "<group>"; };
+		A736FBDC2688E900008BFB5B /* scene.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = scene.txt; sourceTree = "<group>"; };
 		A75745FE268776AE00005F6F /* 1605084_classes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = 1605084_classes.h; sourceTree = "<group>"; };
 		A7574600268776E000005F6F /* bitmap_image.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = bitmap_image.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -51,7 +51,6 @@
 		A7126D8826877028008DA7EE = {
 			isa = PBXGroup;
 			children = (
-				A736FBDC2688E900008BFB5B /* scene.txt */,
 				A7126D9326877028008DA7EE /* Ray Tracing */,
 				A7126D9226877028008DA7EE /* Products */,
 				A7126D9B2687703F008DA7EE /* Frameworks */,
@@ -69,6 +68,7 @@
 		A7126D9326877028008DA7EE /* Ray Tracing */ = {
 			isa = PBXGroup;
 			children = (
+				A736FBDC2688E900008BFB5B /* scene.txt */,
 				A7126D9426877028008DA7EE /* main.cpp */,
 				A7574600268776E000005F6F /* bitmap_image.hpp */,
 				A75745FE268776AE00005F6F /* 1605084_classes.h */,

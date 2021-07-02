@@ -53,7 +53,7 @@ public:
     }
 
     template<typename T>
-    Point3D operator * (T constant) const
+    Point3D operator * (const T constant) const
     {
         return Point3D(x * constant, y * constant, z * constant);
     }
@@ -64,7 +64,7 @@ public:
     }
 
     template<typename T>
-    friend Point3D operator*(T constant, Point3D const &rhs);
+    friend Point3D operator * (const T constant, const Point3D &rhs);
 
     void normalize_point()
     {
@@ -88,18 +88,23 @@ public:
 };
 
 template<typename T>
-inline Point3D operator*(T constant, Point3D const &rhs) {
+inline Point3D operator * (const T constant, const Point3D &rhs) {
     return rhs * constant;
 }
 
-double vector_dot_product(Point3D const &a, Point3D const &b)
+double vector_dot_product(const Point3D &a, const Point3D &b)
 {
     return (a.x * b.x + a.y * b.y + a.z * b.z);
 }
 
-Point3D vector_cross_product(Point3D const &a, Point3D const &b)
+Point3D vector_cross_product(const Point3D &a, const Point3D &b)
 {
     return Point3D(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+}
+
+double distance_between_points(const Point3D &a, const Point3D &b)
+{
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
 }
 
 class Light{
@@ -114,7 +119,7 @@ public:
         color.resize(3);
     }
 
-    Light(Point3D source)
+    Light(const Point3D &source)
     {
         source_light_position = source;
         color.resize(3);
@@ -143,7 +148,7 @@ public:
         cout << "RGB color value:  R: " << color[0] << "   G: " << color[1] << "   B: " << color[2] << endl;
     }
 
-    ~Light()
+    virtual ~Light()
     {
         source_light_position = Point3D();
         color.clear();
@@ -159,7 +164,7 @@ public:
         this->start = this->direction = Point3D(0, 0, 0);
     }
 
-    Ray(Point3D start, Point3D direction)
+    Ray(const Point3D &start, const Point3D &direction)
     {
         this->start = start;
         this->direction = direction; // normalize for easier calculations
@@ -174,7 +179,8 @@ public:
         direction.printPoint();
     }
 
-    virtual ~Ray() {
+    virtual ~Ray()
+    {
         this->start = this->direction = Point3D();
     }
 };
@@ -223,25 +229,26 @@ public:
         //r = a - 2 * (a . n) * n.   here, a = incident ray, n = normal, r = reflected ray
         Point3D reflection = incident_vector - 2 * vector_dot_product(incident_vector, normal) * normal;
         reflection.normalize_point();
+        
         return reflection;
     }
     
     virtual void draw(){}
     
-    virtual Point3D get_normal_vector(Point3D const &intersection_point)
+    virtual Point3D get_normal_vector(const Point3D &intersection_point)
     {
-        return Point3D();//origin
+        return Point3D();
     }
     
     
-    virtual double get_intersection_point_t_value(Ray ray)
+    virtual double get_intersection_point_t_value(const Ray &ray)
     {
-        return -1;
+        return -1.0;
     }
 
-    virtual double intersect(Ray ray, vector<double> &changed_color, int level)
+    virtual double intersect(const Ray &ray, vector<double> &changed_color, int level)
     {
-        return -1;
+        return -1.0;
     }
     
     virtual void print_object()
@@ -263,7 +270,7 @@ vector<Object*> objects;
 vector<Light> lights;
 int level_of_recursion;
 
-void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<double> &changed_color, int level)
+void coloring_illumination_reflection(Object *object, const Ray &ray, double t, vector<double> &changed_color, int level)
 {
     //intersection point equation --> (ro + t * rd)
     Point3D intersection_point = ray.start + t * ray.direction;
@@ -290,11 +297,13 @@ void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<
         
         // For each object now check whether this L ray obscured by any object or not.
         bool is_obscured = false;
+        double dist_from_light_to_intersection = distance_between_points(lights[i].source_light_position, intersection_point);
         
         for(int j = 0; j < objects.size(); j++)
         {
             double t_value = objects[j]->get_intersection_point_t_value(light_ray);
-            if(t_value > 0.0)
+            
+            if(t_value > 0.0 && t_value <= dist_from_light_to_intersection)
             {
                 is_obscured = true;
                 break;
@@ -366,7 +375,7 @@ void coloring_illumination_reflection(Object *object, Ray ray, double t, vector<
 class Sphere : public Object{
 
 public:
-    Sphere(Point3D center, double radius)
+    Sphere(const Point3D &center, double radius)
     {
         this->reference_point = center;
         this->height = this->width = this->length = radius;
@@ -381,7 +390,7 @@ public:
         glPopMatrix();
     }
     
-    Point3D get_normal_vector(Point3D const &intersection_point) override
+    Point3D get_normal_vector(const Point3D &intersection_point) override
     {
         Point3D normal = intersection_point - reference_point;
         normal.normalize_point();
@@ -389,7 +398,7 @@ public:
         return normal;
     }
     
-    double get_intersection_point_t_value(Ray ray) override
+    double get_intersection_point_t_value(const Ray &ray) override
     {
         //Geometric Ray-Sphere Intersection
         Point3D Ro = ray.start - reference_point; // ro = ro - center(stored in reference point)
@@ -414,7 +423,7 @@ public:
             t = tp - t_prime;
         }
         
-        /* Normal Procedure
+        /*                        Normal Procedure
         double a = 1.0;
         double b = 2 * vector_dot_product(ray.direction, ray.start - reference_point);
         double c = vector_dot_product(ray.start - reference_point, ray.start - reference_point) - height * height;
@@ -429,12 +438,12 @@ public:
         
         if(t1 > 0.0 && t2 > 0.0) return min(t1, t2);
         else if(t1 < 0.0 && t2 > 0.0) return t2;
-        else return -1.0;*/
+        else return -1.0;   */
         
         return t;
     }
 
-    double intersect(Ray ray, vector<double> &changed_color, int level) override
+    double intersect(const Ray &ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
         
@@ -483,7 +492,7 @@ public:
 class Triangle : public Object{
 
 public:
-    Triangle(Point3D a, Point3D b, Point3D c)
+    Triangle(const Point3D &a, const Point3D &b, const Point3D &c)
     {
         triangle_end_points.resize(3);
         triangle_end_points[0] = a;
@@ -491,7 +500,7 @@ public:
         triangle_end_points[2] = c;
     }
     
-    Point3D get_normal_vector(Point3D const &intersection_point) override
+    Point3D get_normal_vector(const Point3D &intersection_point) override
     {
         Point3D edge1 = triangle_end_points[1] - triangle_end_points[0];
         Point3D edge2 = triangle_end_points[2] - triangle_end_points[0];
@@ -501,7 +510,7 @@ public:
         return normal;
     }
     
-    double get_intersection_point_t_value(Ray ray) override
+    double get_intersection_point_t_value(const Ray &ray) override
     {
         //Moller–Trumbore ray-triangle intersection algorithm
         Point3D edge1 = triangle_end_points[1] - triangle_end_points[0];
@@ -529,7 +538,7 @@ public:
         else return -1.0;
     }
     
-    double intersect(Ray ray, vector<double> &changed_color, int level) override
+    double intersect(const Ray &ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
         if(t <= 0 ) return -1.0;
@@ -599,7 +608,7 @@ public:
         
     }
     
-    Point3D get_normal_vector(Point3D const &intersection_point) override
+    Point3D get_normal_vector(const Point3D &intersection_point) override
     {
         //del F / del x = 2Ax + Dy + Ez + G
         double normal_x = 2 * gen_obj_coefficients[0] * intersection_point.x + gen_obj_coefficients[3] * intersection_point.y + gen_obj_coefficients[4] * intersection_point.z + gen_obj_coefficients[6];
@@ -616,7 +625,7 @@ public:
         return normal;
     }
     
-    bool is_within_cube(Point3D const &intersection_point)
+    bool is_within_cube(const Point3D &intersection_point)
     {
         bool is_within = true;
         if(length != 0)
@@ -645,7 +654,7 @@ public:
         return is_within;
     }
     
-    double get_intersection_point_t_value(Ray ray) override
+    double get_intersection_point_t_value(const Ray &ray) override
     {
         double a = gen_obj_coefficients[0] * ray.direction.x * ray.direction.x + gen_obj_coefficients[1] * ray.direction.y * ray.direction.y + gen_obj_coefficients[2] * ray.direction.z * ray.direction.z + gen_obj_coefficients[3] * ray.direction.x * ray.direction.y + gen_obj_coefficients[4] * ray.direction.x * ray.direction.z + gen_obj_coefficients[5] * ray.direction.y * ray.direction.z ;
         
@@ -672,10 +681,10 @@ public:
         {
             return t_max;
         }
-        else return -1;
+        else return -1.0;
     }
     
-    double intersect(Ray ray, vector<double> &changed_color, int level) override
+    double intersect(const Ray &ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
 
@@ -757,12 +766,12 @@ public:
         reference_point = Point3D(-floor_width/2, -floor_width/2, 0); //leftmost bottom corner of the XY plane
     }
     
-    Point3D get_normal_vector(Point3D const &intersection_point) override
+    Point3D get_normal_vector(const Point3D &intersection_point) override
     {
         return Point3D(0.0, 0.0, 1.0); //In XY plane normal is Z axis
     }
     
-    bool is_within_boundary(Point3D const &point)
+    bool is_within_boundary(const Point3D &point)
     {
         if(point.x < reference_point.x || point.x > -reference_point.x || point.y < reference_point.y || point.y > -reference_point.y)
         {
@@ -771,7 +780,7 @@ public:
         else return true;
     }
     
-    double get_intersection_point_t_value(Ray ray) override
+    double get_intersection_point_t_value(const Ray &ray) override
     {
         /*
          ray : P(t) = Ro + t * Rd
@@ -782,6 +791,7 @@ public:
          for floor: D = 0 and t = - ray.start.z / ray.direction.z
          */
         double t = -1.0;
+        
         if(ray.direction.z != 0)//denom check
         {
             t = (double) -(ray.start.z / ray.direction.z);
@@ -790,7 +800,7 @@ public:
         return t;
     }
     
-    double intersect(Ray ray, vector<double> &changed_color, int level) override
+    double intersect(const Ray &ray, vector<double> &changed_color, int level) override
     {
         double t = get_intersection_point_t_value(ray);
         
