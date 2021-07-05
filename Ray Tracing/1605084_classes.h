@@ -549,6 +549,7 @@ public:
         if(level == 0) return t; //When level is 0, the purpose of the method is to determine the nearest object only.
         
         coloring_illumination_reflection(this, ray, t, changed_color, level);
+        
         return t;
     }
     

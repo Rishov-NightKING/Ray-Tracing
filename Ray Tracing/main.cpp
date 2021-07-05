@@ -124,7 +124,7 @@ void capture()
     }
 
     double plane_distance = (WINDOW_HEIGHT / 2.0) / tan(degreeToRadianAngle(FOVY / 2.0));
-    Point3D top_left = eye_pos + look * plane_distance - rght * (WINDOW_HEIGHT / 2.0) + up * (WINDOW_HEIGHT / 2.0);
+    Point3D top_left = eye_pos + look * plane_distance - rght * (WINDOW_WIDTH / 2.0) + up * (WINDOW_HEIGHT / 2.0);
     double du = (double) WINDOW_WIDTH / image_width;
     double dv = (double) WINDOW_HEIGHT / image_height;
 
